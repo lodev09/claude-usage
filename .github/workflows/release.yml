@@ -46,21 +46,27 @@ jobs:
           plutil -replace CFBundleShortVersionString -string "$VERSION" dist/$APP.app/Contents/Info.plist
           codesign --force --options runtime --timestamp --sign "$IDENTITY" dist/$APP.app
 
+      - name: Create DMG
+        run: |
+          mkdir dist/dmg
+          cp -R dist/$APP.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "Claude Usage" -srcfolder dist/dmg -ov -format UDZO dist/$APP.dmg
+          codesign --force --timestamp --sign "$IDENTITY" dist/$APP.dmg
+
       - name: Notarize and staple
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          ditto -c -k --keepParent dist/$APP.app dist/$APP.zip
-          xcrun notarytool submit dist/$APP.zip \
+          xcrun notarytool submit dist/$APP.dmg \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$TEAM_ID" \
             --wait
-          xcrun stapler staple dist/$APP.app
-          ditto -c -k --keepParent dist/$APP.app dist/$APP.zip
+          xcrun stapler staple dist/$APP.dmg
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/$APP.zip --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/$APP.dmg --title "$GITHUB_REF_NAME" --generate-notes
