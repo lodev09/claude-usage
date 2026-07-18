@@ -6,33 +6,50 @@ struct AboutView: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 16) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 72, height: 72)
+                .frame(width: 96, height: 96)
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
 
-            Text("Claude Usage")
-                .font(.title3.bold())
+            VStack(spacing: 6) {
+                Text("Claude Usage")
+                    .font(.title2.weight(.semibold))
+                Text("Version \(version)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+            }
 
-            Text("Version \(version)")
-                .font(.caption)
+            Text("Claude usage limits, live in your menu bar.")
+                .font(.callout)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 16) {
-                Link(destination: URL(string: "https://github.com/lodev09/claude-usage")!) {
-                    Label("GitHub", systemImage: "curlybraces")
-                }
-                Link(destination: URL(string: "https://github.com/lodev09")!) {
-                    Label("@lodev09", systemImage: "person")
-                }
+            HStack(spacing: 10) {
+                linkButton("GitHub", icon: "curlybraces", url: "https://github.com/lodev09/claude-usage")
+                linkButton("@lodev09", icon: "person", url: "https://github.com/lodev09")
             }
-            .font(.callout)
 
             Text("MIT License © 2026 Jovanni Lo")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
-        .padding(28)
-        .frame(width: 280)
+        .padding(.horizontal, 40)
+        .padding(.vertical, 28)
+        .frame(width: 300)
+    }
+
+    private func linkButton(_ title: String, icon: String, url: String) -> some View {
+        Button {
+            NSWorkspace.shared.open(URL(string: url)!)
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.callout)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+        .controlSize(.small)
     }
 }

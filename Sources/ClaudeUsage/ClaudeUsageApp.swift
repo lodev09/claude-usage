@@ -20,5 +20,10 @@ struct ClaudeUsageApp: App {
             AboutView()
         }
         .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
+
+        Settings {
+            SettingsView()
+        }
     }
 }

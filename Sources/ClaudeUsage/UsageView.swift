@@ -3,6 +3,7 @@ import SwiftUI
 struct UsageView: View {
     @ObservedObject var model: UsageModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -75,15 +76,6 @@ struct UsageView: View {
             }
             Spacer()
             Button {
-                openWindow(id: "about")
-                NSApp.activate(ignoringOtherApps: true)
-            } label: {
-                Image(systemName: "info.circle")
-            }
-            .buttonStyle(.borderless)
-            .help("About")
-
-            Button {
                 model.refresh(force: true)
             } label: {
                 Image(systemName: "arrow.clockwise")
@@ -91,13 +83,25 @@ struct UsageView: View {
             .buttonStyle(.borderless)
             .help("Refresh")
 
-            Button {
-                NSApp.terminate(nil)
+            Menu {
+                Button("Settings…") {
+                    openSettings()
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                Button("About Claude Usage") {
+                    openWindow(id: "about")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                Divider()
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
             } label: {
-                Image(systemName: "power")
+                Image(systemName: "gearshape")
             }
-            .buttonStyle(.borderless)
-            .help("Quit")
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
     }
 }
