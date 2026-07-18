@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UsageView: View {
     @ObservedObject var model: UsageModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -73,6 +74,15 @@ struct UsageView: View {
                     .foregroundStyle(.tertiary)
             }
             Spacer()
+            Button {
+                openWindow(id: "about")
+                NSApp.activate(ignoringOtherApps: true)
+            } label: {
+                Image(systemName: "info.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("About")
+
             Button {
                 model.refresh(force: true)
             } label: {

@@ -7,6 +7,8 @@ build:
 	mkdir -p $(DIST)/Contents/MacOS
 	cp .build/release/$(APP) $(DIST)/Contents/MacOS/
 	cp Info.plist $(DIST)/Contents/
+	mkdir -p $(DIST)/Contents/Resources
+	cp AppIcon.icns $(DIST)/Contents/Resources/
 	codesign --force --sign - $(DIST)
 
 run: build

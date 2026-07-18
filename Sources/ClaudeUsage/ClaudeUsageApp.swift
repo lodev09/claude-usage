@@ -15,5 +15,10 @@ struct ClaudeUsageApp: App {
             }
         }
         .menuBarExtraStyle(.window)
+
+        Window("About Claude Usage", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
     }
 }

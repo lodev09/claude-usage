@@ -43,15 +43,25 @@ jobs:
           mkdir -p dist/$APP.app/Contents/MacOS
           cp .build/apple/Products/Release/$APP dist/$APP.app/Contents/MacOS/
           cp Info.plist dist/$APP.app/Contents/
+          mkdir -p dist/$APP.app/Contents/Resources
+          cp AppIcon.icns dist/$APP.app/Contents/Resources/
           plutil -replace CFBundleShortVersionString -string "$VERSION" dist/$APP.app/Contents/Info.plist
           codesign --force --options runtime --timestamp --sign "$IDENTITY" dist/$APP.app
 
       - name: Create DMG
         run: |
+          brew install create-dmg
           mkdir dist/dmg
           cp -R dist/$APP.app dist/dmg/
-          ln -s /Applications dist/dmg/Applications
-          hdiutil create -volname "Claude Usage" -srcfolder dist/dmg -ov -format UDZO dist/$APP.dmg
+          create-dmg \
+            --volname "Claude Usage" \
+            --volicon AppIcon.icns \
+            --window-size 540 380 \
+            --icon-size 128 \
+            --icon "$APP.app" 140 185 \
+            --app-drop-link 400 185 \
+            --no-internet-enable \
+            dist/$APP.dmg dist/dmg
           codesign --force --timestamp --sign "$IDENTITY" dist/$APP.dmg
 
       - name: Notarize and staple
