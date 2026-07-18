@@ -6,8 +6,11 @@ struct UsageView: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             header
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            Divider()
 
             if let error = model.error, model.snapshot.limits.isEmpty {
                 Text(error)
@@ -16,29 +19,32 @@ struct UsageView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                ForEach(model.snapshot.limits) { limit in
-                    LimitRow(limit: limit)
-                }
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(model.snapshot.limits) { limit in
+                        LimitRow(limit: limit)
+                    }
 
-                if let extra = model.snapshot.extraUsage {
-                    Divider()
-                    HStack {
-                        Text("Extra usage")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(extra)
-                            .font(.subheadline.weight(.medium))
-                            .monospacedDigit()
+                    if let extra = model.snapshot.extraUsage {
+                        HStack {
+                            Text("Extra usage")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(extra)
+                                .font(.subheadline.weight(.medium))
+                                .monospacedDigit()
+                        }
                     }
                 }
+                .padding(14)
             }
 
             Divider()
             footer
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
         }
-        .padding(14)
-        .frame(width: 300)
+        .frame(width: 340)
         .onAppear { model.refresh(force: true) }
     }
 
