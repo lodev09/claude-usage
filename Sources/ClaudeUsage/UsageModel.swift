@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct LimitInfo: Identifiable {
     let id: String
@@ -15,6 +16,15 @@ struct ProfileInfo {
     let organization: String?
     let organizationType: String?
     let tierLabel: String?
+
+    var avatarURL: URL? {
+        guard let email else { return nil }
+        let normalized = email.lowercased().trimmingCharacters(in: .whitespaces)
+        let hash = Insecure.MD5.hash(data: Data(normalized.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return URL(string: "https://www.gravatar.com/avatar/\(hash)?s=120&d=404")
+    }
 }
 
 struct UsageSnapshot {

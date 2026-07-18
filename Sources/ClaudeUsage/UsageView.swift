@@ -60,11 +60,29 @@ struct UsageView: View {
             }
 
             if let profile = model.profile {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 10) {
+                    AsyncImage(url: profile.avatarURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [Color(red: 0.95, green: 0.58, blue: 0.42), Color(red: 0.85, green: 0.47, blue: 0.34)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ))
+                            .overlay {
+                                Text(profile.name?.prefix(1) ?? "?")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+                    }
+                    .frame(width: 30, height: 30)
+                    .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
                         if let name = profile.name {
                             Text(name)
-                                .font(.caption.weight(.medium))
+                                .font(.caption.weight(.semibold))
                         }
                         if let email = profile.email {
                             Text(email)
@@ -72,11 +90,13 @@ struct UsageView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+
                     Spacer()
+
                     if let org = profile.organization {
-                        VStack(alignment: .trailing, spacing: 1) {
+                        VStack(alignment: .trailing, spacing: 2) {
                             Text(org)
-                                .font(.caption.weight(.medium))
+                                .font(.caption.weight(.semibold))
                             if let type = profile.organizationType {
                                 Text(type)
                                     .font(.caption2)
@@ -85,6 +105,8 @@ struct UsageView: View {
                         }
                     }
                 }
+                .padding(10)
+                .background(.quinary, in: RoundedRectangle(cornerRadius: 8))
             }
         }
     }
