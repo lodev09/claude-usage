@@ -30,6 +30,10 @@ make run
 
 If macOS prompts for keychain access on first launch, click **Always Allow**.
 
+## Disclaimer
+
+Unofficial project, not affiliated with or endorsed by Anthropic. It relies on undocumented endpoints used by Claude Code, which may change or break at any time.
+
 ## License
 
 [MIT](LICENSE)
