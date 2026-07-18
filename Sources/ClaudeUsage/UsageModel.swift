@@ -9,6 +9,14 @@ struct LimitInfo: Identifiable {
     let isActive: Bool
 }
 
+struct ProfileInfo {
+    let name: String?
+    let email: String?
+    let organization: String?
+    let organizationType: String?
+    let tierLabel: String?
+}
+
 struct UsageSnapshot {
     var limits: [LimitInfo] = []
     var extraUsage: String?
@@ -21,6 +29,11 @@ final class UsageModel: ObservableObject {
     @Published var error: String?
     @Published var isLoading = false
     @Published var tier: String?
+    @Published var profile: ProfileInfo?
+
+    var tierLabel: String? {
+        profile?.tierLabel ?? tier?.capitalized
+    }
 
     var headline: String {
         guard let session = snapshot.limits.first(where: { $0.kind == "session" }) else { return "–" }
@@ -51,6 +64,9 @@ final class UsageModel: ObservableObject {
         do {
             let creds = try await Task.detached { try Self.readCredentials() }.value
             tier = creds.tier
+            if profile == nil {
+                profile = try? await Self.fetchProfile(token: creds.token)
+            }
             let usage = try await Self.fetchUsage(token: creds.token)
             snapshot = usage
             blockedUntil = nil
@@ -92,6 +108,34 @@ final class UsageModel: ObservableObject {
     }
 
     // MARK: - API
+
+    private static func fetchProfile(token: String) async throws -> ProfileInfo {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/profile")!)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw AppError("Profile unavailable")
+        }
+        let api = try JSONDecoder().decode(ProfileResponse.self, from: data)
+
+        func prettify(_ raw: String?) -> String? {
+            raw?
+                .replacingOccurrences(of: "default_claude_", with: "")
+                .replacingOccurrences(of: "claude_", with: "")
+                .replacingOccurrences(of: "_", with: " ")
+                .capitalized
+        }
+
+        return ProfileInfo(
+            name: api.account?.full_name,
+            email: api.account?.email,
+            organization: api.organization?.name,
+            organizationType: prettify(api.organization?.organization_type),
+            tierLabel: prettify(api.organization?.rate_limit_tier)
+        )
+    }
 
     private static func fetchUsage(token: String) async throws -> UsageSnapshot {
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
@@ -153,6 +197,20 @@ struct AppError: LocalizedError {
 }
 
 // MARK: - API models
+
+private struct ProfileResponse: Decodable {
+    struct Account: Decodable {
+        let full_name: String?
+        let email: String?
+    }
+    struct Organization: Decodable {
+        let name: String?
+        let organization_type: String?
+        let rate_limit_tier: String?
+    }
+    let account: Account?
+    let organization: Organization?
+}
 
 private struct APIResponse: Decodable {
     let limits: [APILimit]

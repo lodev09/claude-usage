@@ -43,18 +43,48 @@ struct UsageView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkle")
-                .foregroundStyle(.orange)
-            Text("Claude Usage")
-                .font(.headline)
-            Spacer()
-            if let tier = model.tier {
-                Text(tier.capitalized)
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(.quaternary, in: Capsule())
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkle")
+                    .foregroundStyle(.orange)
+                Text("Claude Usage")
+                    .font(.headline)
+                Spacer()
+                if let tier = model.tierLabel {
+                    Text(tier)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(.quaternary, in: Capsule())
+                }
+            }
+
+            if let profile = model.profile {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if let name = profile.name {
+                            Text(name)
+                                .font(.caption.weight(.medium))
+                        }
+                        if let email = profile.email {
+                            Text(email)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    if let org = profile.organization {
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(org)
+                                .font(.caption.weight(.medium))
+                            if let type = profile.organizationType {
+                                Text(type)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -64,7 +94,7 @@ struct UsageView: View {
             if model.isLoading {
                 ProgressView()
                     .controlSize(.mini)
-            } else if let error = model.error {
+            } else if let error = model.error, model.snapshot.fetchedAt == nil {
                 Text(error)
                     .font(.caption2)
                     .foregroundStyle(.orange)
