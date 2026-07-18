@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  APP: ClaudeUsage
+  IDENTITY: ${{ secrets.APPLE_IDENTITY }}
+  TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import signing certificate
+        env:
+          CERT_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/cert.p12
+          KEYCHAIN=$RUNNER_TEMP/build.keychain-db
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo -n "$CERT_BASE64" | base64 --decode -o "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+
+      - name: Build
+        run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Bundle and sign
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p dist/$APP.app/Contents/MacOS
+          cp .build/apple/Products/Release/$APP dist/$APP.app/Contents/MacOS/
+          cp Info.plist dist/$APP.app/Contents/
+          plutil -replace CFBundleShortVersionString -string "$VERSION" dist/$APP.app/Contents/Info.plist
+          codesign --force --options runtime --timestamp --sign "$IDENTITY" dist/$APP.app
+
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          ditto -c -k --keepParent dist/$APP.app dist/$APP.zip
+          xcrun notarytool submit dist/$APP.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+          xcrun stapler staple dist/$APP.app
+          ditto -c -k --keepParent dist/$APP.app dist/$APP.zip
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/$APP.zip --title "$GITHUB_REF_NAME" --generate-notes
