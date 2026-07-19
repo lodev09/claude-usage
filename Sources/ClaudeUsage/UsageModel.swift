@@ -40,6 +40,12 @@ final class UsageModel: ObservableObject {
     @Published var isLoading = false
     @Published var tier: String?
     @Published var profile: ProfileInfo?
+    @Published var refreshInterval: TimeInterval {
+        didSet {
+            UserDefaults.standard.set(refreshInterval, forKey: "refreshInterval")
+            startPolling()
+        }
+    }
 
     var tierLabel: String? {
         profile?.tierLabel ?? tier?.capitalized
@@ -50,14 +56,23 @@ final class UsageModel: ObservableObject {
         return "\(Int(session.percent))%"
     }
 
+    @Published private(set) var blockedUntil: Date?
+
     private var pollTask: Task<Void, Never>?
-    private var blockedUntil: Date?
 
     init() {
+        let saved = UserDefaults.standard.double(forKey: "refreshInterval")
+        refreshInterval = saved > 0 ? saved : 300
+        startPolling()
+    }
+
+    private func startPolling() {
+        pollTask?.cancel()
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.load()
-                try? await Task.sleep(for: .seconds(300))
+                guard let interval = self?.refreshInterval else { break }
+                try? await Task.sleep(for: .seconds(interval))
             }
         }
     }
@@ -68,7 +83,7 @@ final class UsageModel: ObservableObject {
 
     private func load(force: Bool = false) async {
         if let blocked = blockedUntil, Date() < blocked { return }
-        if !force, let last = snapshot.fetchedAt, Date().timeIntervalSince(last) < 60 { return }
+        if !force, let last = snapshot.fetchedAt, Date().timeIntervalSince(last) < 30 { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -180,7 +195,12 @@ final class UsageModel: ObservableObject {
         }
         if let used = api.spend?.used, api.spend?.enabled == true {
             let amount = used.amount_minor / pow(10, Double(used.exponent))
-            snapshot.extraUsage = amount.formatted(.currency(code: used.currency))
+            var text = amount.formatted(.currency(code: used.currency))
+            if let limit = api.spend?.limit {
+                let cap = limit.amount_minor / pow(10, Double(limit.exponent))
+                text += " of \(cap.formatted(.currency(code: limit.currency)))"
+            }
+            snapshot.extraUsage = text
         }
         snapshot.fetchedAt = Date()
         return snapshot
@@ -251,6 +271,7 @@ private struct APILimit: Decodable {
 
 private struct APISpend: Decodable {
     let used: Money?
+    let limit: Money?
     let enabled: Bool?
     struct Money: Decodable {
         let amount_minor: Double

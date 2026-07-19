@@ -23,7 +23,7 @@ struct ClaudeUsageApp: App {
         .windowStyle(.hiddenTitleBar)
 
         Settings {
-            SettingsView()
+            SettingsView(model: model)
         }
     }
 }

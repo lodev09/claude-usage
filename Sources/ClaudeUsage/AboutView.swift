@@ -26,10 +26,12 @@ struct AboutView: View {
             Text("Claude usage limits, live in your menu bar.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                linkButton("GitHub", icon: "curlybraces", url: "https://github.com/lodev09/claude-usage")
-                linkButton("@lodev09", icon: "person", url: "https://github.com/lodev09")
+                linkButton("GitHub", url: "https://github.com/lodev09/claude-usage")
+                linkButton("@lodev09", url: "https://github.com/lodev09")
             }
 
             Text("MIT License © 2026 Jovanni Lo")
@@ -41,11 +43,11 @@ struct AboutView: View {
         .frame(width: 300)
     }
 
-    private func linkButton(_ title: String, icon: String, url: String) -> some View {
+    private func linkButton(_ title: String, url: String) -> some View {
         Button {
             NSWorkspace.shared.open(URL(string: url)!)
         } label: {
-            Label(title, systemImage: icon)
+            Text(title)
                 .font(.callout)
         }
         .buttonStyle(.bordered)

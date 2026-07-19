@@ -111,11 +111,25 @@ struct UsageView: View {
         }
     }
 
+    private func retryCountdown(to date: Date) -> String {
+        let seconds = Int(max(0, date.timeIntervalSinceNow))
+        if seconds < 60 { return "<1m" }
+        let minutes = seconds / 60
+        return "\(minutes)m"
+    }
+
     private var footer: some View {
         HStack {
             if model.isLoading {
                 ProgressView()
                     .controlSize(.mini)
+            } else if let blocked = model.blockedUntil, blocked > Date() {
+                TimelineView(.everyMinute) { _ in
+                    Text("Rate limited · retry in \(retryCountdown(to: blocked))")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                }
             } else if let error = model.error, model.snapshot.fetchedAt == nil {
                 Text(error)
                     .font(.caption2)
@@ -136,7 +150,7 @@ struct UsageView: View {
             .help("Refresh")
 
             Menu {
-                Button("Settings…") {
+                Button("Settings") {
                     openSettings()
                     NSApp.activate(ignoringOtherApps: true)
                 }
