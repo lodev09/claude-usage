@@ -6,7 +6,7 @@ struct UsageView: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             header
 
             if let error = model.error, model.snapshot.limits.isEmpty {
@@ -21,15 +21,19 @@ struct UsageView: View {
                 }
 
                 if let extra = model.snapshot.extraUsage {
-                    Divider()
-                    HStack {
-                        Text("Extra usage")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(extra)
-                            .font(.subheadline.weight(.medium))
-                            .monospacedDigit()
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            Text("Extra usage")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(extra)
+                                .font(.subheadline.weight(.medium))
+                                .monospacedDigit()
+                        }
+                        if let percent = model.snapshot.extraUsagePercent {
+                            UsageBar(percent: percent)
+                        }
                     }
                 }
             }
@@ -43,7 +47,7 @@ struct UsageView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "sparkle")
                     .foregroundStyle(.orange)
@@ -172,6 +176,36 @@ struct UsageView: View {
     }
 }
 
+private struct UsageBar: View {
+    let percent: Double
+
+    private var color: Color {
+        switch percent {
+        case ..<50: .green
+        case ..<75: .yellow
+        case ..<90: .orange
+        default: .red
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.quaternary)
+                Capsule()
+                    .fill(LinearGradient(
+                        colors: [color.opacity(0.6), color],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                    .frame(width: max(6, geo.size.width * min(percent, 100) / 100))
+            }
+        }
+        .frame(height: 6)
+        .animation(.spring(duration: 0.5), value: percent)
+    }
+}
+
 private struct LimitRow: View {
     let limit: LimitInfo
 
@@ -196,20 +230,7 @@ private struct LimitRow: View {
                     .foregroundStyle(color)
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.quaternary)
-                    Capsule()
-                        .fill(LinearGradient(
-                            colors: [color.opacity(0.6), color],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ))
-                        .frame(width: max(6, geo.size.width * min(limit.percent, 100) / 100))
-                }
-            }
-            .frame(height: 6)
-            .animation(.spring(duration: 0.5), value: limit.percent)
+            UsageBar(percent: limit.percent)
 
             if let resets = limit.resetsAt {
                 TimelineView(.everyMinute) { _ in

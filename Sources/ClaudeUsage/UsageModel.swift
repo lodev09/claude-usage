@@ -30,6 +30,7 @@ struct ProfileInfo {
 struct UsageSnapshot {
     var limits: [LimitInfo] = []
     var extraUsage: String?
+    var extraUsagePercent: Double?
     var fetchedAt: Date?
 }
 
@@ -195,12 +196,13 @@ final class UsageModel: ObservableObject {
         }
         if let used = api.spend?.used, api.spend?.enabled == true {
             let amount = used.amount_minor / pow(10, Double(used.exponent))
-            var text = amount.formatted(.currency(code: used.currency))
+            var text = amount.formatted(.currency(code: used.currency).presentation(.narrow))
             if let limit = api.spend?.limit {
                 let cap = limit.amount_minor / pow(10, Double(limit.exponent))
-                text += " of \(cap.formatted(.currency(code: limit.currency)))"
+                text += " of \(cap.formatted(.currency(code: limit.currency).presentation(.narrow)))"
             }
             snapshot.extraUsage = text
+            snapshot.extraUsagePercent = api.spend?.percent
         }
         snapshot.fetchedAt = Date()
         return snapshot
@@ -272,6 +274,7 @@ private struct APILimit: Decodable {
 private struct APISpend: Decodable {
     let used: Money?
     let limit: Money?
+    let percent: Double?
     let enabled: Bool?
     struct Money: Decodable {
         let amount_minor: Double
