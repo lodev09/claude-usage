@@ -8,7 +8,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Picker("Refresh every", selection: $model.refreshInterval) {
-                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(120))
                 Text("5 minutes").tag(TimeInterval(300))
                 Text("10 minutes").tag(TimeInterval(600))
                 Text("15 minutes").tag(TimeInterval(900))

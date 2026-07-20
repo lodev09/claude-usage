@@ -41,8 +41,12 @@ final class UsageModel: ObservableObject {
     @Published var isLoading = false
     @Published var tier: String?
     @Published var profile: ProfileInfo?
+    static let minRefreshInterval: TimeInterval = 90
+
     @Published var refreshInterval: TimeInterval {
         didSet {
+            let clamped = max(Self.minRefreshInterval, refreshInterval)
+            if clamped != refreshInterval { refreshInterval = clamped; return }
             UserDefaults.standard.set(refreshInterval, forKey: "refreshInterval")
             startPolling()
         }
@@ -63,7 +67,7 @@ final class UsageModel: ObservableObject {
 
     init() {
         let saved = UserDefaults.standard.double(forKey: "refreshInterval")
-        refreshInterval = saved > 0 ? saved : 300
+        refreshInterval = max(Self.minRefreshInterval, saved > 0 ? saved : 300)
         startPolling()
     }
 
@@ -99,7 +103,7 @@ final class UsageModel: ObservableObject {
             error = nil
         } catch let rateLimited as RateLimitedError {
             blockedUntil = Date().addingTimeInterval(rateLimited.retryAfter)
-            error = rateLimited.localizedDescription
+            error = nil
         } catch {
             self.error = error.localizedDescription
         }
@@ -219,7 +223,7 @@ final class UsageModel: ObservableObject {
 
 struct RateLimitedError: LocalizedError {
     let retryAfter: TimeInterval
-    var errorDescription: String? { "Rate limited — retrying shortly" }
+    var errorDescription: String? { "Rate limited" }
 }
 
 struct AppError: LocalizedError {

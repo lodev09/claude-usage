@@ -43,7 +43,7 @@ struct UsageView: View {
         }
         .padding(14)
         .frame(width: 340)
-        .onAppear { model.refresh(force: true) }
+        .onAppear { model.refresh() }
     }
 
     private var header: some View {
@@ -117,9 +117,9 @@ struct UsageView: View {
 
     private func retryCountdown(to date: Date) -> String {
         let seconds = Int(max(0, date.timeIntervalSinceNow))
-        if seconds < 60 { return "<1m" }
+        if seconds < 60 { return "\(seconds)s" }
         let minutes = seconds / 60
-        return "\(minutes)m"
+        return "\(minutes)m \(seconds % 60)s"
     }
 
     private var footer: some View {
@@ -128,7 +128,7 @@ struct UsageView: View {
                 ProgressView()
                     .controlSize(.mini)
             } else if let blocked = model.blockedUntil, blocked > Date() {
-                TimelineView(.everyMinute) { _ in
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
                     Text("Rate limited · retry in \(retryCountdown(to: blocked))")
                         .font(.caption2)
                         .foregroundStyle(.orange)
