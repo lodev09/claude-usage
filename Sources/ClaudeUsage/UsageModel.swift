@@ -92,12 +92,22 @@ final class UsageModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            let creds = try await Task.detached { try Self.readCredentials() }.value
+            var creds = try await Task.detached { try Self.readCredentials() }.value
+            guard !creds.isExpired else { throw TokenExpiredError() }
             tier = creds.tier
             if profile == nil {
                 profile = try? await Self.fetchProfile(token: creds.token)
             }
-            let usage = try await Self.fetchUsage(token: creds.token)
+            var usage: UsageSnapshot
+            do {
+                usage = try await Self.fetchUsage(token: creds.token)
+            } catch is TokenExpiredError {
+                // Claude Code may have refreshed since we read — re-read and retry once
+                let fresh = try await Task.detached { try Self.readCredentials() }.value
+                guard fresh.token != creds.token, !fresh.isExpired else { throw TokenExpiredError() }
+                creds = fresh
+                usage = try await Self.fetchUsage(token: creds.token)
+            }
             snapshot = usage
             blockedUntil = nil
             error = nil
@@ -113,7 +123,13 @@ final class UsageModel: ObservableObject {
 
     private struct Credentials {
         let token: String
+        let expiresAt: Date?
         let tier: String?
+
+        var isExpired: Bool {
+            guard let expiresAt else { return false }
+            return expiresAt.timeIntervalSinceNow < 60
+        }
     }
 
     private nonisolated static func readCredentials() throws -> Credentials {
@@ -134,7 +150,11 @@ final class UsageModel: ObservableObject {
         else {
             throw AppError("Claude Code credentials not found. Sign in via Claude Code first.")
         }
-        return Credentials(token: token, tier: oauth["subscriptionType"] as? String)
+        return Credentials(
+            token: token,
+            expiresAt: (oauth["expiresAt"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) },
+            tier: oauth["subscriptionType"] as? String
+        )
     }
 
     // MARK: - API
@@ -176,7 +196,7 @@ final class UsageModel: ObservableObject {
         guard let http = response as? HTTPURLResponse else { throw AppError("Invalid response") }
         guard http.statusCode == 200 else {
             if http.statusCode == 401 {
-                throw AppError("Token expired. Open Claude Code to refresh it.")
+                throw TokenExpiredError()
             }
             if http.statusCode == 429 {
                 let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init) ?? 120
@@ -224,6 +244,10 @@ final class UsageModel: ObservableObject {
 struct RateLimitedError: LocalizedError {
     let retryAfter: TimeInterval
     var errorDescription: String? { "Rate limited" }
+}
+
+struct TokenExpiredError: LocalizedError {
+    var errorDescription: String? { "Token expired. Open Claude Code to refresh it." }
 }
 
 struct AppError: LocalizedError {
